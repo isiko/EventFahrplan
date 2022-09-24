@@ -199,6 +199,7 @@ dependencies {
     implementation project(":network")
     implementation project(":engelsystem")
 
+    api "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1" // Added to Resolve Dependency Error -> https://issuetracker.google.com/issues/238425626#comment11
     implementation Libs.appCompat
     implementation Libs.betterLinkMovementMethod
     implementation Libs.constraintLayout
