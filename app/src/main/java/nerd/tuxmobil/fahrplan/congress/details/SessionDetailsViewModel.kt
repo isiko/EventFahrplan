@@ -1,6 +1,8 @@
 package nerd.tuxmobil.fahrplan.congress.details
 
+import android.content.Context
 import android.net.Uri
+import android.os.Build
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
@@ -13,6 +15,7 @@ import kotlinx.coroutines.launch
 import nerd.tuxmobil.fahrplan.congress.alarms.AlarmServices
 import nerd.tuxmobil.fahrplan.congress.models.Session
 import nerd.tuxmobil.fahrplan.congress.navigation.RoomForC3NavConverter
+import nerd.tuxmobil.fahrplan.congress.notifications.NotificationHelper
 import nerd.tuxmobil.fahrplan.congress.repositories.AppRepository
 import nerd.tuxmobil.fahrplan.congress.repositories.ExecutionContext
 import nerd.tuxmobil.fahrplan.congress.sharing.JsonSessionFormat
@@ -24,11 +27,12 @@ import nerd.tuxmobil.fahrplan.congress.utils.SessionUrlComposition
 import nerd.tuxmobil.fahrplan.congress.wiki.containsWikiLink
 import org.threeten.bp.ZoneOffset
 
-class SessionDetailsViewModel(
+internal class SessionDetailsViewModel(
 
     private val repository: AppRepository,
     private val executionContext: ExecutionContext,
     private val alarmServices: AlarmServices,
+    private val notificationHelper: NotificationHelper,
     private val sessionFormatter: SessionFormatter,
     private val simpleSessionFormat: SimpleSessionFormat,
     private val jsonSessionFormat: JsonSessionFormat,
@@ -91,6 +95,7 @@ class SessionDetailsViewModel(
     val setAlarm = SingleLiveEvent<Unit>()
     val navigateToRoom = SingleLiveEvent<Uri>()
     val closeDetails = SingleLiveEvent<Unit>()
+    val checkNotificationPermission = SingleLiveEvent<Boolean>()
 
     private fun SelectedSessionParameter.customizeEngelsystemRoomName() = copy(
         roomName = if (roomName == defaultEngelsystemRoomName) customEngelsystemRoomName else roomName
@@ -186,7 +191,11 @@ class SessionDetailsViewModel(
     }
 
     fun setAlarm() {
-        setAlarm.postValue(Unit)
+        if (notificationHelper.notificationsEnabled) {
+            setAlarm.postValue(Unit)
+        } else {
+            checkNotificationPermission.postValue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        }
     }
 
     fun addAlarm(alarmTimesIndex: Int) {

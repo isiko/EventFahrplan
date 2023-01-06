@@ -14,6 +14,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
 import androidx.annotation.LayoutRes
@@ -38,6 +40,7 @@ import nerd.tuxmobil.fahrplan.congress.extensions.startActivity
 import nerd.tuxmobil.fahrplan.congress.extensions.toSpanned
 import nerd.tuxmobil.fahrplan.congress.extensions.withArguments
 import nerd.tuxmobil.fahrplan.congress.models.Session
+import nerd.tuxmobil.fahrplan.congress.notifications.NotificationHelper
 import nerd.tuxmobil.fahrplan.congress.repositories.AppRepository
 import nerd.tuxmobil.fahrplan.congress.sharing.SessionSharer
 import nerd.tuxmobil.fahrplan.congress.sidepane.OnSidePaneCloseListener
@@ -69,13 +72,15 @@ class SessionDetailsFragment : Fragment() {
         }
 
     }
-
+    private lateinit var permissionRequestLauncher: ActivityResultLauncher<String>
     private lateinit var appRepository: AppRepository
     private lateinit var alarmServices: AlarmServices
+    private lateinit var notificationHelper: NotificationHelper
     private val viewModel: SessionDetailsViewModel by viewModels {
         SessionDetailsViewModelFactory(
             appRepository = appRepository,
             alarmServices = alarmServices,
+            notificationHelper = notificationHelper,
             defaultEngelsystemRoomName = AppRepository.ENGELSYSTEM_ROOM_NAME,
             customEngelsystemRoomName = getString(R.string.engelsystem_shifts_alias)
         )
@@ -93,10 +98,10 @@ class SessionDetailsFragment : Fragment() {
         R.id.menu_item_add_to_calendar to { addToCalendar() },
         R.id.menu_item_flag_as_favorite to { favorSession() },
         R.id.menu_item_unflag_as_favorite to { unfavorSession() },
-        R.id.menu_item_set_alarm to { setAlarm() },
         R.id.menu_item_delete_alarm to { deleteAlarm() },
         R.id.menu_item_close_session_details to { closeDetails() },
         R.id.menu_item_navigate to { navigateToRoom() },
+        R.id.menu_item_set_alarm to { setAlarm() },
     )
 
     @MainThread
@@ -105,6 +110,7 @@ class SessionDetailsFragment : Fragment() {
         super.onAttach(context)
         appRepository = AppRepository
         alarmServices = AlarmServices.newInstance(context, appRepository)
+        notificationHelper = NotificationHelper(context)
         markwon = Markwon.builder(requireContext())
             .usePlugin(LinkifyPlugin.create())
             .build()
@@ -114,6 +120,16 @@ class SessionDetailsFragment : Fragment() {
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        permissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            isGranted: Boolean ->
+                if (isGranted) {
+                    viewModel.setAlarm()
+                } else {
+                    Toast.makeText(context, resources.getString(R.string.alarm_disabled_toast), Toast.LENGTH_LONG).show()
+                }
+        }
+
         setHasOptionsMenu(true)
     }
 
@@ -183,6 +199,18 @@ class SessionDetailsFragment : Fragment() {
             if (activity is OnSidePaneCloseListener) {
                 (activity as OnSidePaneCloseListener).onSidePaneClose(FRAGMENT_TAG)
             }
+        }
+        viewModel.checkNotificationPermission.observe(viewLifecycleOwner) {
+            sdkOver33:Boolean ->
+                if (sdkOver33) {
+                    permissionRequestLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    Toast.makeText(
+                        context,
+                        resources.getString(R.string.alarm_disabled_toast),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
         }
     }
 
