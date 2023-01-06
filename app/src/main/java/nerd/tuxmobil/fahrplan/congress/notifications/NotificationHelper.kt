@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
 import androidx.core.app.NotificationChannelCompat
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -18,6 +17,8 @@ internal class NotificationHelper(context: Context) : ContextWrapper(context) {
     private val notificationManager: NotificationManagerCompat by lazy {
         getNotificationManager()
     }
+
+    val notificationsEnabled = notificationManager.areNotificationsEnabled()
 
     init {
         createChannels()
@@ -93,13 +94,6 @@ internal class NotificationHelper(context: Context) : ContextWrapper(context) {
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .setSmallIcon(smallIcon)
                     .setSound(sound)
-
-    val notificationsEnabled: Boolean
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            notificationManager.areNotificationsEnabled()
-        } else {
-            true
-        }
 
     private val sessionAlarmChannelDescription: String
         get() = getString(R.string.notifications_session_alarm_channel_description)

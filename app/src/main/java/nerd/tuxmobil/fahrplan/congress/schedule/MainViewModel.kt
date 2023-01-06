@@ -40,7 +40,7 @@ internal class MainViewModel(
 
     val showAbout = SingleLiveEvent<Meta>()
     val openSessionDetails = SingleLiveEvent<Unit>()
-    val showNotificationsDisclaimer = SingleLiveEvent<Unit>()
+    val missingPostNotificationsPermission = SingleLiveEvent<Unit>()
 
     init {
         observeLoadScheduleState()
@@ -138,9 +138,9 @@ internal class MainViewModel(
         }
     }
 
-    fun checkNotificationPermissions(){
-        if(repository.readAlarms().isNotEmpty() && !notificationHelper.notificationsEnabled) {
-            showNotificationsDisclaimer.postValue(Unit)
+    fun checkPostNotificationsPermission() {
+        if (repository.readAlarms().isNotEmpty() && !notificationHelper.notificationsEnabled) {
+            missingPostNotificationsPermission.postValue(Unit)
         }
     }
 

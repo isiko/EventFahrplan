@@ -97,10 +97,7 @@ class MainActivity : BaseActivity(),
     private lateinit var progressBar: ContentLoadingProgressBar
     private var progressDialog: ProgressDialog? = null
     private val viewModel: MainViewModel by viewModels {
-        MainViewModelFactory(
-            repository = AppRepository,
-            notificationHelper = notificationHelper
-        )
+        MainViewModelFactory(AppRepository, notificationHelper)
     }
 
     private var isScreenLocked = false
@@ -117,7 +114,7 @@ class MainActivity : BaseActivity(),
         instance = this
         setContentView(R.layout.main_layout)
 
-        notificationHelper = NotificationHelper(applicationContext)
+        notificationHelper = NotificationHelper(this)
 
         keyguardManager = getSystemService()!!
         errorMessageFactory = ErrorMessage.Factory(this)
@@ -144,7 +141,7 @@ class MainActivity : BaseActivity(),
         initUserEngagement()
         observeViewModel()
         onSessionAlarmNotificationTapped(intent)
-        viewModel.checkNotificationPermissions()
+        viewModel.checkPostNotificationsPermission()
     }
 
     private fun observeViewModel() {
@@ -171,8 +168,8 @@ class MainActivity : BaseActivity(),
         viewModel.openSessionDetails.observe(this) {
             openSessionDetails()
         }
-        viewModel.showNotificationsDisclaimer.observe(this) {
-            Toast.makeText(baseContext, R.string.alarm_disabled_toast, Toast.LENGTH_LONG).show()
+        viewModel.missingPostNotificationsPermission.observe(this) {
+            Toast.makeText(this, R.string.alarms_disabled_notifications_permission_missing, Toast.LENGTH_LONG).show()
         }
     }
 

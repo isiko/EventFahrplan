@@ -1,6 +1,5 @@
 package nerd.tuxmobil.fahrplan.congress.details
 
-import android.content.Context
 import android.net.Uri
 import android.os.Build
 import androidx.core.net.toUri
@@ -43,7 +42,8 @@ internal class SessionDetailsViewModel(
     private val formattingDelegate: FormattingDelegate = DateFormattingDelegate(),
     private val c3NavBaseUrl: String,
     private val defaultEngelsystemRoomName: String,
-    private val customEngelsystemRoomName: String
+    private val customEngelsystemRoomName: String,
+    private val runsAtLeastOnAndroidTiramisu: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
 ) : ViewModel() {
 
@@ -95,7 +95,8 @@ internal class SessionDetailsViewModel(
     val setAlarm = SingleLiveEvent<Unit>()
     val navigateToRoom = SingleLiveEvent<Uri>()
     val closeDetails = SingleLiveEvent<Unit>()
-    val checkNotificationPermission = SingleLiveEvent<Boolean>()
+    val requestPostNotificationsPermission = SingleLiveEvent<Unit>()
+    val missingPostNotificationsPermission = SingleLiveEvent<Unit>()
 
     private fun SelectedSessionParameter.customizeEngelsystemRoomName() = copy(
         roomName = if (roomName == defaultEngelsystemRoomName) customEngelsystemRoomName else roomName
@@ -194,7 +195,10 @@ internal class SessionDetailsViewModel(
         if (notificationHelper.notificationsEnabled) {
             setAlarm.postValue(Unit)
         } else {
-            checkNotificationPermission.postValue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            when (runsAtLeastOnAndroidTiramisu) {
+                true -> requestPostNotificationsPermission.postValue(Unit)
+                false -> missingPostNotificationsPermission.postValue(Unit)
+            }
         }
     }
 

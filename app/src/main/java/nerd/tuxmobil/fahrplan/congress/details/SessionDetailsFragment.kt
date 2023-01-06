@@ -1,5 +1,7 @@
 package nerd.tuxmobil.fahrplan.congress.details
 
+import android.Manifest.permission.POST_NOTIFICATIONS
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -15,7 +17,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
 import androidx.annotation.LayoutRes
@@ -98,10 +100,10 @@ class SessionDetailsFragment : Fragment() {
         R.id.menu_item_add_to_calendar to { addToCalendar() },
         R.id.menu_item_flag_as_favorite to { favorSession() },
         R.id.menu_item_unflag_as_favorite to { unfavorSession() },
+        R.id.menu_item_set_alarm to { setAlarm() },
         R.id.menu_item_delete_alarm to { deleteAlarm() },
         R.id.menu_item_close_session_details to { closeDetails() },
         R.id.menu_item_navigate to { navigateToRoom() },
-        R.id.menu_item_set_alarm to { setAlarm() },
     )
 
     @MainThread
@@ -121,13 +123,12 @@ class SessionDetailsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        permissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            isGranted: Boolean ->
-                if (isGranted) {
-                    viewModel.setAlarm()
-                } else {
-                    Toast.makeText(context, resources.getString(R.string.alarm_disabled_toast), Toast.LENGTH_LONG).show()
-                }
+        permissionRequestLauncher = registerForActivityResult(RequestPermission()) { isGranted ->
+            if (isGranted) {
+                viewModel.setAlarm()
+            } else {
+                showMissingPostNotificationsPermissionError()
+            }
         }
 
         setHasOptionsMenu(true)
@@ -158,6 +159,7 @@ class SessionDetailsFragment : Fragment() {
         activity.setResult(Activity.RESULT_CANCELED)
     }
 
+    @SuppressLint("InlinedApi")
     private fun observeViewModel() {
         viewModel.selectedSessionParameter.observe(viewLifecycleOwner) { model ->
             this.model = model
@@ -200,17 +202,11 @@ class SessionDetailsFragment : Fragment() {
                 (activity as OnSidePaneCloseListener).onSidePaneClose(FRAGMENT_TAG)
             }
         }
-        viewModel.checkNotificationPermission.observe(viewLifecycleOwner) {
-            sdkOver33:Boolean ->
-                if (sdkOver33) {
-                    permissionRequestLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    Toast.makeText(
-                        context,
-                        resources.getString(R.string.alarm_disabled_toast),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+        viewModel.requestPostNotificationsPermission.observe(viewLifecycleOwner) {
+            permissionRequestLauncher.launch(POST_NOTIFICATIONS)
+        }
+        viewModel.missingPostNotificationsPermission.observe(viewLifecycleOwner) {
+            showMissingPostNotificationsPermissionError()
         }
     }
 
@@ -352,6 +348,10 @@ class SessionDetailsFragment : Fragment() {
         this.setLinkTextColor(ContextCompat.getColor(context, R.color.text_link_on_light))
         this.movementMethod = LinkMovementMethodCompat.getInstance()
         this.isVisible = true
+    }
+
+    private fun showMissingPostNotificationsPermissionError() {
+        Toast.makeText(requireContext(), R.string.alarms_disabled_notifications_permission_missing, Toast.LENGTH_LONG).show()
     }
 
     private fun updateOptionsMenu() {
